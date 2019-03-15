@@ -144,6 +144,7 @@ class AnimationContext {
 @property(nonatomic) IBOutlet NSLayoutConstraint *answerFieldToBottomConstraint;
 @property(nonatomic) IBOutlet NSLayoutConstraint *answerFieldToSubjectDetailsViewConstraint;
 @property(weak, nonatomic) IBOutlet NSLayoutConstraint *previousSubjectButtonWidthConstraint;
+@property(weak, nonatomic) IBOutlet NSLayoutConstraint *previousSubjectButtonHeightConstraint;
 
 @end
 
@@ -700,7 +701,9 @@ class AnimationContext {
   label.center = oldLabelCenter;
 
   CGFloat newButtonWidth =
-      kPreviousSubjectButtonPadding * 2 + labelBounds.size.width * kPreviousSubjectScale;
+    kPreviousSubjectButtonPadding * 2 + labelBounds.size.width * kPreviousSubjectScale;
+  CGFloat newButtonHeight =
+    kPreviousSubjectButtonPadding * 2 + labelBounds.size.height * kPreviousSubjectScale;
 
   NSArray<id> *newGradient = TKMGradientForSubject(_previousSubject);
 
@@ -731,6 +734,7 @@ class AnimationContext {
         [self.view addConstraints:@[ centerXConstraint, centerYConstraint ]];
 
         _previousSubjectButtonWidthConstraint.constant = newButtonWidth;
+        _previousSubjectButtonHeightConstraint.constant = newButtonHeight;
         [self.view layoutIfNeeded];
 
         _previousSubjectGradient.colors = newGradient;
