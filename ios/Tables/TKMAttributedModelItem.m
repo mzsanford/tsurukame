@@ -44,6 +44,10 @@ static const CGFloat kMinimumHeight = 44.f;
     self.selectionStyle = UITableViewCellSelectionStyleNone;
     self.userInteractionEnabled = YES;
 
+      if (@available(iOS 13.0, *)) {
+          self.backgroundColor = UIColor.systemBackgroundColor;
+      }
+
     _textView = [[UITextView alloc] initWithFrame:self.bounds];
     _textView.editable = NO;
     _textView.scrollEnabled = NO;

@@ -84,7 +84,7 @@ private func defaultStringAttrs() -> [NSAttributedString.Key: Any] {
   if #available(iOS 13.0, *) {
     return [
       .foregroundColor: UIColor.label,
-      .backgroundColor: UIColor.secondarySystemBackground,
+      .backgroundColor: UIColor.systemBackground,
     ]
   } else {
     return [
