@@ -55,14 +55,15 @@ typedef void (^NotificationPermissionHandler)(BOOL granted);
 - (void)rerender {
   TKMMutableTableModel *model = [[TKMMutableTableModel alloc] initWithTableView:self.tableView];
 
-  [model addSection:@"App"];
-  [model addItem:[[TKMBasicModelItem alloc] initWithStyle:UITableViewCellStyleValue1
-                                                   title:@"UI Appearance"
-                                                subtitle:self.interfaceStyleValueText
-                                           accessoryType:UITableViewCellAccessoryDisclosureIndicator
-                                                  target:self
-                                                  action:@selector(didTapInterfaceStyle:)]];
-
+  if (@available(iOS 13.0, *)) {
+    [model addSection:@"App"];
+    [model addItem:[[TKMBasicModelItem alloc] initWithStyle:UITableViewCellStyleValue1
+                                                      title:@"UI Appearance"
+                                                   subtitle:self.interfaceStyleValueText
+                                              accessoryType:UITableViewCellAccessoryDisclosureIndicator
+                                                     target:self
+                                                     action:@selector(didTapInterfaceStyle:)]];
+  }
   [model addSection:@"Notifications"];
   [model addItem:[[TKMSwitchModelItem alloc] initWithStyle:UITableViewCellStyleDefault
                                                      title:@"Notify for all available reviews"
