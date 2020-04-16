@@ -1563,6 +1563,29 @@
             </objects>
             <point key="canvasLocation" x="1822" y="-1155"/>
         </scene>
+        <!--Lesson Summary-->
+        <scene sceneID="xWD-g3-8Lk">
+            <objects>
+                <tableViewController storyboardIdentifier="lessonsSummaryViewController" id="ei3-wA-cab" userLabel="Lesson Summary" customClass="LessonsSummaryViewController" customModule="Tsurukame" customModuleProvider="target" sceneMemberID="viewController">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="grouped" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="18" sectionFooterHeight="18" id="RF2-S6-7Yo">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" cocoaTouchSystemColor="groupTableViewBackgroundColor"/>
+                    </tableView>
+                    <toolbarItems/>
+                    <navigationItem key="navigationItem" title="Lesson Summary" id="GAC-gA-SaB">
+                        <barButtonItem key="leftBarButtonItem" systemItem="done" id="8xx-kJ-23S">
+                            <connections>
+                                <action selector="doneClicked:" destination="ei3-wA-cab" id="teb-KC-xFx"/>
+                            </connections>
+                        </barButtonItem>
+                    </navigationItem>
+                    <simulatedNavigationBarMetrics key="simulatedTopBarMetrics" prompted="NO"/>
+                </tableViewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="j0A-2y-ngJ" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1182" y="176"/>
+        </scene>
     </scenes>
     <resources>
         <image name="add" width="22" height="22"/>
