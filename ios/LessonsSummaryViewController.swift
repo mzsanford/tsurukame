@@ -17,7 +17,7 @@ import UIKit
 @objc class LessonsSummaryViewController: UITableViewController, TKMSubjectDelegate,
   ReviewViewControllerDelegate {
   var tableModel: TKMMutableTableModel?
-  var services: TKMServices?
+  var services: TKMServices!
   var items: [ReviewItem]?
 
   @objc public func setup(withServices services: TKMServices, items: [ReviewItem]) {
@@ -34,11 +34,12 @@ import UIKit
 
     tableModel?.addSection("New Items")
     for item in items ?? [] {
-      if let subject = services?.dataLoader.load(subjectID: Int(item.assignment.subjectId)) {
+      if let subject = services.dataLoader.load(subjectID: Int(item.assignment.subjectId)) {
         tableModel?.add(TKMSubjectModelItem(subject: subject, delegate: self))
       }
     }
 
+    // TODO: Fix buttons
     let doneButton = UIButton(type: .system)
     doneButton.titleLabel?.font = UIFont.boldSystemFont(ofSize: UIFont.systemFontSize)
     doneButton.setTitle("Done", for: .normal)
@@ -71,7 +72,8 @@ import UIKit
     let assignments = services.localCachingClient.getAllAssignments()
     // TODO: Relaunch into lessons
     var items = ReviewItem.assignmentsReady(forLesson: assignments,
-                                            dataLoader: services.dataLoader)
+                                            dataLoader: services.dataLoader,
+                                            localCachingClient: services.localCachingClient)
 
     if items.count == 0 {
       return
@@ -79,14 +81,12 @@ import UIKit
 
     items = items.sorted(by: { a, b in a.compare(forLessons: b) })
     if items.count > Settings.lessonBatchSize {
-      // items = Array(items[0 ..< Int(Settings.lessonBatchSize)])
-      items = Array([items[0]])
+      items = Array(items[0 ..< Int(Settings.lessonBatchSize)])
     }
 
     if let vc = storyboard?
       .instantiateViewController(withIdentifier: "reviewViewController") as? ReviewViewController {
-      vc
-        .setup(withServices: services, items: items, showMenuButton: false,
+      vc.setup(withServices: services, items: items, showMenuButton: false,
                showSubjectHistory: false, delegate: self)
       navigationController?.pushViewController(vc, animated: true)
     }

@@ -3,7 +3,7 @@
     <device id="retina4_7" orientation="portrait" appearance="light"/>
     <dependencies>
         <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16086"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="16087"/>
         <capability name="Safe area layout guides" minToolsVersion="9.0"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -1577,6 +1577,11 @@
                         <barButtonItem key="leftBarButtonItem" systemItem="done" id="8xx-kJ-23S">
                             <connections>
                                 <action selector="doneClicked:" destination="ei3-wA-cab" id="teb-KC-xFx"/>
+                            </connections>
+                        </barButtonItem>
+                        <barButtonItem key="rightBarButtonItem" title="Next" id="c4q-gi-Zs1">
+                            <connections>
+                                <action selector="nextClicked:" destination="ei3-wA-cab" id="mYI-3U-Eul"/>
                             </connections>
                         </barButtonItem>
                     </navigationItem>
