@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,27 +13,27 @@
 // limitations under the License.
 
 import Foundation
+import WaniKaniAPI
 
-@objc class SRSStageCategoryItem: TKMBasicModelItem {
-  let stageCategory: TKMSRSStageCategory
+class SRSStageCategoryItem: BasicModelItem {
+  let stageCategory: SRSStageCategory
 
-  @objc init(stageCategory: TKMSRSStageCategory, count: Int) {
+  init(stageCategory: SRSStageCategory, count: Int,
+       accessoryType: UITableViewCell.AccessoryType = .none) {
     self.stageCategory = stageCategory
     super.init(style: .value1,
-               title: TKMSRSStageCategoryName(stageCategory),
+               title: stageCategory.description,
                subtitle: String(count),
-               accessoryType: .none,
-               target: nil,
-               action: nil)
+               accessoryType: accessoryType)
 
     var color = TKMStyle.color(forSRSStageCategory: stageCategory)
 
     if #available(iOS 13.0, *), stageCategory == .burned,
-      UITraitCollection.current.userInterfaceStyle == .dark {
+       UITraitCollection.current.userInterfaceStyle == .dark {
       color = UIColor.label
     }
     textColor = color
     imageTintColor = color
-    image = UIImage(named: TKMSRSStageCategoryName(stageCategory))!
+    image = UIImage(named: stageCategory.description)!
   }
 }

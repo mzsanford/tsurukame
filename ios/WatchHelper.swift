@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import WatchConnectivity
   import ClockKit
 #endif
 
-typealias ClientDelegateCallback = (([String: Any]) -> Void)
+typealias ClientDelegateCallback = ([String: Any]) -> Void
 typealias EpochTimeInt = Int64
 
 class WatchConnectionServerDelegate: NSObject, WCSessionDelegate {
@@ -101,19 +101,19 @@ class WatchConnectionClientDelegate: NSObject, WCSessionDelegate {
     @objc func updatedData(client: LocalCachingClient) {
       var halfLevel = false
       var assignmentsAtCurrentLevel = client.getAssignmentsAtUsersCurrentLevel()
-      var learnedCount = assignmentsAtCurrentLevel.filter { (assignment) -> Bool in
-        assignment.srsStage >= 5
+      var learnedCount = assignmentsAtCurrentLevel.filter { assignment -> Bool in
+        assignment.srsStage >= .guru1
       }.count
 
       // If the user is in the vocab and technically levels up but has 0
       // learned treat it as the prior level and set halfLevel=true
       if learnedCount == 0,
-        let assignment = assignmentsAtCurrentLevel.first,
-        assignment.level > 0 {
+         let assignment = assignmentsAtCurrentLevel.first,
+         assignment.level > 0 {
         halfLevel = true
-        assignmentsAtCurrentLevel = client.getAssignmentsAtLevel(assignment.level - 1)
-        learnedCount = assignmentsAtCurrentLevel.filter { (assignment) -> Bool in
-          assignment.srsStage >= 5
+        assignmentsAtCurrentLevel = client.getAssignments(level: Int(assignment.level) - 1)
+        learnedCount = assignmentsAtCurrentLevel.filter { assignment -> Bool in
+          assignment.srsStage >= .guru1
         }.count
       }
 
@@ -125,8 +125,8 @@ class WatchConnectionClientDelegate: NSObject, WCSessionDelegate {
 
       let packet: [String: Any] = [
         WatchHelper.keyReviewCount: client.availableReviewCount,
-        WatchHelper.keyReviewNextHourCount: client.upcomingReviews.first?.intValue ?? 0,
-        WatchHelper.keyReviewUpcomingHourlyCounts: client.upcomingReviews.map { $0.intValue },
+        WatchHelper.keyReviewNextHourCount: client.upcomingReviews.first ?? 0,
+        WatchHelper.keyReviewUpcomingHourlyCounts: client.upcomingReviews,
         WatchHelper.keyLevelCurrent: assignmentsAtCurrentLevel.first?.level ?? 0,
         WatchHelper.keyLevelTotal: assignmentsAtCurrentLevel.count,
         WatchHelper.keyLevelLearned: learnedCount,
@@ -174,7 +174,7 @@ class WatchConnectionClientDelegate: NSObject, WCSessionDelegate {
 
   func shouldSendPacket(packet: [String: Any]) -> Bool {
     guard let lastSignature = lastPacketSignature,
-      let lastSent = lastPacketSentAt else {
+          let lastSent = lastPacketSentAt else {
       // The first one's always free.
       return true
     }

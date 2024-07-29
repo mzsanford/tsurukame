@@ -29,7 +29,6 @@ end
 
 lane :test do
   run_tests(
-    derived_data_path: "~/Library/Developer/Xcode/DerivedData",
     scheme: "Tsurukame",
     include_simulator_logs: true,
   )
@@ -49,10 +48,38 @@ lane :new_version do
 end
 
 lane :beta do
-  match(type: "appstore")
+  match(
+    type: "appstore",
+    api_key_path: "fastlane/app_store_api_key.json",
+  )
+
+  update_code_signing_settings(
+    code_sign_identity: "iPhone Distribution",
+  )
+
+  update_project_provisioning(
+    xcodeproj: "Tsurukame.xcodeproj",
+    target_filter: "^Tsurukame$",
+    profile:ENV["sigh_com.davidsansome.wanikani_appstore_profile-path"],
+    build_configuration: "Release",
+  )
+
+  update_project_provisioning(
+    xcodeproj: "Tsurukame.xcodeproj",
+    target_filter: "^Tsurukame Complication$",
+    profile:ENV["sigh_com.davidsansome.wanikani.watchapp_appstore_profile-path"],
+    build_configuration: "Release",
+  )
+
+  update_project_provisioning(
+    xcodeproj: "Tsurukame.xcodeproj",
+    target_filter: "^Tsurukame Complication Extension$",
+    profile:ENV["sigh_com.davidsansome.wanikani.watchapp.c_appstore_profile-path"],
+    build_configuration: "Release",
+  )
+
   build_app(
     scheme: "Tsurukame",
-    include_bitcode: true,
   )
 
   # Generate the changelog from git commits since the last tag.
@@ -63,19 +90,55 @@ lane :beta do
     groups: "Testers",
     demo_account_required: true,
     reject_build_waiting_for_review: true,
+    api_key_path: "fastlane/app_store_api_key.json",
   )
 end
 
 lane :release do
-  match(type: "appstore")
+  match(
+    type: "appstore",
+    api_key_path: "fastlane/app_store_api_key.json",
+  )
+
+  update_code_signing_settings(
+    code_sign_identity: "iPhone Distribution",
+  )
+
+  update_project_provisioning(
+    xcodeproj: "Tsurukame.xcodeproj",
+    target_filter: "^Tsurukame$",
+    profile:ENV["sigh_com.davidsansome.wanikani_appstore_profile-path"],
+    build_configuration: "Release",
+  )
+
+  update_project_provisioning(
+    xcodeproj: "Tsurukame.xcodeproj",
+    target_filter: "^Tsurukame Complication$",
+    profile:ENV["sigh_com.davidsansome.wanikani.watchapp_appstore_profile-path"],
+    build_configuration: "Release",
+  )
+
+  update_project_provisioning(
+    xcodeproj: "Tsurukame.xcodeproj",
+    target_filter: "^Tsurukame Complication Extension$",
+    profile:ENV["sigh_com.davidsansome.wanikani.watchapp.c_appstore_profile-path"],
+    build_configuration: "Release",
+  )
+
   build_app(
     scheme: "Tsurukame",
-    include_bitcode: true,
   )
+
   upload_to_app_store(
     app_icon: "Resources/appicon1024.png",
     submit_for_review: true,
     automatic_release: true,
+    phased_release: true,
+    api_key_path: "fastlane/app_store_api_key.json",
+    precheck_include_in_app_purchases: false,
+    submission_information: {
+      add_id_info_uses_idfa: false
+    }
   )
   tag_release
 end
@@ -88,5 +151,5 @@ end
 
 after_all do
   clean_build_artifacts
-  reset_git_repo
+  reset_git_repo(disregard_gitignore: false)
 end

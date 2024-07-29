@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 import XCTest
 
 class FontScreenshotterUITests: XCTestCase {
-  let app: XCUIApplication = XCUIApplication()
+  let app = XCUIApplication()
 
   override func setUp() {
     continueAfterFailure = false

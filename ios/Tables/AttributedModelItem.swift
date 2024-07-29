@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,21 +17,24 @@ import Foundation
 private let kEdgeInsets = UIEdgeInsets(top: 8, left: 16, bottom: 8, right: 16)
 private let kMinimumHeight: CGFloat = 44
 
-@objc(TKMAttributedModelItem)
-class AttributedModelItem: NSObject, TKMModelItem {
-  let text: NSAttributedString
+class AttributedModelItem: TableModelItem {
+  var text: NSAttributedString
+
+  var rightButtonImage: UIImage?
+  var rightButtonCallback: ((_ cell: AttributedModelCell) -> Void)?
 
   init(text: NSAttributedString) {
     self.text = text
-    super.init()
   }
 
-  func cellClass() -> AnyClass! {
-    AttributedModelCell.self
+  var cellFactory: TableModelCellFactory {
+    .fromDefaultConstructor(cellClass: AttributedModelCell.self)
   }
 }
 
-class AttributedModelCell: TKMModelCell {
+class AttributedModelCell: TableModelCell {
+  @TypedModelItem var item: AttributedModelItem
+
   var textView: UITextView!
   var rightButton: UIButton?
 
@@ -51,42 +54,71 @@ class AttributedModelCell: TKMModelCell {
     contentView.addSubview(textView)
   }
 
-  required init?(coder _: NSCoder) {
+  @available(*, unavailable) required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
-  override func sizeThatFits(_ size: CGSize) -> CGSize {
-    var availableRect = CGRect(origin: .zero, size: size).inset(by: kEdgeInsets)
-    let textViewSize = textView.sizeThatFits(availableRect.size)
+  private func calculateLayouts(_ availableRect: CGRect)
+    -> (rightButtonFrame: CGRect?, exclusionPaths: [UIBezierPath], textHeight: CGFloat) {
+    var rightButtonFrame: CGRect?
+    var exclusionPaths = [UIBezierPath]()
 
-    availableRect.size.height = max(kMinimumHeight,
-                                    textViewSize.height + kEdgeInsets.top + kEdgeInsets.bottom)
-    return availableRect.size
+    // If there's a right button, calculate its rectangle and add that as a text exclusion path.
+    if let rightButton = rightButton {
+      let buttonSize = rightButton.intrinsicContentSize
+      rightButtonFrame = CGRect(x: availableRect.maxX - buttonSize.width - kEdgeInsets.left,
+                                y: availableRect.origin.y - kEdgeInsets.top,
+                                width: buttonSize.width + kEdgeInsets.right + kEdgeInsets.left,
+                                height: buttonSize.height + kEdgeInsets.top + kEdgeInsets
+                                  .bottom)
+      exclusionPaths.append(UIBezierPath(rect: rightButtonFrame!))
+    }
+
+    // Calculate the height of the text. We can't just use UITextView.sizeThatFits because it gets
+    // the wrong answer for CJK text. The order here matters, see
+    // https://github.com/facebook/AsyncDisplayKit/issues/2894.
+    let storage = NSTextStorage()
+    let manager = NSLayoutManager()
+    manager.usesFontLeading = false
+    storage.addLayoutManager(manager)
+    storage.setAttributedString(textView.attributedText)
+
+    var size = availableRect.size
+    size.height = CGFloat.greatestFiniteMagnitude
+
+    let container = NSTextContainer(size: size)
+    container.lineFragmentPadding = 0
+    container.exclusionPaths = exclusionPaths
+    manager.addTextContainer(container)
+    manager.ensureLayout(for: container)
+
+    let textHeight = manager.usedRect(for: container).height
+
+    return (rightButtonFrame: rightButtonFrame, exclusionPaths: exclusionPaths,
+            textHeight: textHeight)
+  }
+
+  override func sizeThatFits(_ size: CGSize) -> CGSize {
+    let availableRect = CGRect(origin: .zero, size: size).inset(by: kEdgeInsets)
+    let layout = calculateLayouts(availableRect)
+
+    return CGSize(width: availableRect.width, height: max(kMinimumHeight,
+                                                          layout.textHeight + kEdgeInsets
+                                                            .top + kEdgeInsets.bottom))
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
 
     var availableRect = bounds.inset(by: kEdgeInsets)
+    let layout = calculateLayouts(availableRect)
 
-    if let rightButton = rightButton {
-      let buttonSize = rightButton.intrinsicContentSize
-      rightButton.frame = CGRect(x: availableRect.maxX - buttonSize.width - kEdgeInsets.right,
-                                 y: availableRect.origin.y - kEdgeInsets.top,
-                                 width: buttonSize.width + kEdgeInsets.right * 2,
-                                 height: availableRect.size.height + kEdgeInsets.top + kEdgeInsets
-                                   .bottom)
-
-      availableRect.size.width -= buttonSize.width + kEdgeInsets.right
+    if let rightButton = rightButton, let rightButtonFrame = layout.rightButtonFrame {
+      rightButton.frame = rightButtonFrame
     }
+    textView.textContainer.exclusionPaths = layout.exclusionPaths
 
-    // [UITextView sizeToFit] gives the wrong size for attributed strings that mix bold and normal
-    // weight Japanese text.  We use [NSAttributedString boundingRectWithSize] which gives the correct
-    // size.
-    let text = textView.attributedText!
-    let textViewSize = text.boundingRect(with: availableRect.size,
-                                         options: .usesLineFragmentOrigin,
-                                         context: nil).size
+    let textViewSize = CGSize(width: availableRect.width, height: layout.textHeight)
 
     // Center the text vertically.
     if textViewSize.height < availableRect.size.height {
@@ -97,10 +129,32 @@ class AttributedModelCell: TKMModelCell {
     textView.frame = availableRect
   }
 
-  override func update(with baseItem: TKMModelItem!) {
-    super.update(with: baseItem)
-
-    let item = baseItem as! AttributedModelItem
+  override func update() {
     textView.attributedText = item.text
+
+    if let rightButtonImage = item.rightButtonImage {
+      if rightButton == nil {
+        rightButton = UIButton()
+        rightButton!
+          .addTarget(self, action: #selector(AttributedModelCell.didTapRightButton),
+                     for: .touchUpInside)
+        addSubview(rightButton!)
+      }
+      rightButton!.setImage(rightButtonImage, for: .normal)
+    } else {
+      removeRightButton()
+    }
+  }
+
+  func removeRightButton() {
+    item.rightButtonImage = nil
+
+    rightButton?.removeFromSuperview()
+    rightButton = nil
+    textView.textContainer.exclusionPaths = []
+  }
+
+  @objc func didTapRightButton() {
+    item.rightButtonCallback?(self)
   }
 }

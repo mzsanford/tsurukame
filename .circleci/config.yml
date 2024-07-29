@@ -1,41 +1,28 @@
 version: 2.1
 orbs:
-  gcp-cli: circleci/gcp-cli@1.8.3
+  gcp-cli: circleci/gcp-cli@1.8.4
 
 jobs:
   test-golang:
     docker:
-      - image: circleci/golang:1.12
+      - image: cimg/go:1.22.1
     steps:
       - checkout
       - run: go build ./...
       - run: go test ./...
 
-  download-data-bin:
-    docker:
-      - image: google/cloud-sdk
-    steps:
-      - run:
-          name: Download data.bin
-          command: |
-            echo $SERVICE_ACCOUNT_KEY | gcloud auth activate-service-account --key-file=-
-            mkdir workspace
-            gsutil cp gs://tsurukame-data/1.13 workspace/data.bin
-      - persist_to_workspace:
-          root: workspace
-          paths:
-            - data.bin
-
   test-ios:
     macos:
-      xcode: "11.3.0"
+      xcode: 15.3.0
     environment:
       FL_OUTPUT_DIR: output
     steps:
       - checkout
+      - run: sudo defaults write com.apple.dt.Xcode IDEPackageSupportUseBuiltinSCM YES
+      - run: rm ~/.ssh/id_rsa || true
+      - run: for ip in $(dig @8.8.8.8 github.com +short); do ssh-keyscan github.com,$ip; ssh-keyscan $ip; done 2>/dev/null >> ~/.ssh/known_hosts || true
       - attach_workspace:
           at: workspace
-      - run: cp workspace/data.bin data.bin
       - run:
           command: bundle install
           working_directory: ios
@@ -53,15 +40,20 @@ jobs:
 
   release-testflight:
     macos:
-      xcode: "11.3.0"
+      xcode: 15.3.0
     steps:
       - checkout
+      - run: sudo defaults write com.apple.dt.Xcode IDEPackageSupportUseBuiltinSCM YES
+      - run: rm ~/.ssh/id_rsa || true
+      - run: for ip in $(dig @8.8.8.8 github.com +short); do ssh-keyscan github.com,$ip; ssh-keyscan $ip; done 2>/dev/null >> ~/.ssh/known_hosts || true
       - attach_workspace:
           at: workspace
-      - run: cp workspace/data.bin data.bin
       - run:
           name: Install certificate service account
           command: echo $CERTIFICATE_SERVICE_ACCOUNT > ios/fastlane/gc_keys.json
+      - run:
+          name: Install App Store API key
+          command: echo $APP_STORE_API_KEY_JSON > ios/fastlane/app_store_api_key.json
       - run:
           command: bundle install
           working_directory: ios
@@ -74,15 +66,4 @@ workflows:
   all:
     jobs:
       - test-golang
-
-      - download-data-bin
-      - test-ios:
-          requires:
-            - download-data-bin
-      - release-testflight:
-          context: appstore_credentials
-          requires:
-            - test-ios
-          filters:
-            branches:
-              only: master
+      - test-ios

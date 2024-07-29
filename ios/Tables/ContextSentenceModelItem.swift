@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,16 +14,18 @@
 
 import Accelerate
 import Foundation
+import WaniKaniAPI
 
-private let kBlurKernelSize: UInt32 = 19
+private let kBlurKernelSize: CGFloat = 19
 private let kBlurAlpha: CGFloat = 0.75
 private let kRevealDuration: TimeInterval = 0.2
 
 class ContextSentenceModelItem: AttributedModelItem {
   let japaneseText: NSAttributedString
   let englishText: NSAttributedString
+  var blurred = true
 
-  init(_ sentence: TKMVocabulary_Sentence,
+  init(_ sentence: TKMVocabulary.Sentence,
        highlightSubject: TKMSubject,
        defaultAttributes: [NSAttributedString.Key: Any],
        fontSize: CGFloat) {
@@ -55,12 +57,14 @@ class ContextSentenceModelItem: AttributedModelItem {
     super.init(text: text)
   }
 
-  override func cellClass() -> AnyClass! {
-    ContextSentenceModelCell.self
+  override var cellFactory: TableModelCellFactory {
+    .fromDefaultConstructor(cellClass: ContextSentenceModelCell.self)
   }
 }
 
 private class ContextSentenceModelCell: AttributedModelCell {
+  @TypedModelItem var contextSentenceItem: ContextSentenceModelItem
+
   var blurredOverlay: UIView!
 
   override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -70,19 +74,15 @@ private class ContextSentenceModelCell: AttributedModelCell {
     contentView.addSubview(blurredOverlay)
   }
 
-  required init?(coder _: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
+  override func update() {
+    super.update()
 
-  override func update(with baseItem: TKMModelItem!) {
-    super.update(with: baseItem)
-    blurredOverlay.alpha = 1
+    blurredOverlay.alpha = contextSentenceItem.blurred ? 1 : 0
   }
 
   override func layoutSubviews() {
     super.layoutSubviews()
 
-    let item = self.item as! ContextSentenceModelItem
     let rect = contentView.bounds
     let size = rect.size
 
@@ -93,16 +93,19 @@ private class ContextSentenceModelCell: AttributedModelCell {
       TKMStyle.Color.cellBackground.setFill()
       UIRectFill(rect)
       englishCtx.setAlpha(kBlurAlpha)
-      item.englishText.draw(with: textView.frame, options: .usesLineFragmentOrigin, context: nil)
+      contextSentenceItem.englishText.draw(with: textView.frame, options: .usesLineFragmentOrigin,
+                                           context: nil)
     }
 
     // Blur the english text.
     let blurredCtx = CGContext.screenBitmap(size: size, screen: window!.screen)
-    englishCtx.blur(to: blurredCtx, kernelSize: kBlurKernelSize)
+    englishCtx.blur(to: blurredCtx,
+                    kernelSize: UInt32(UIFontMetrics.default.scaledValue(for: kBlurKernelSize)))
 
     // Render the Japanese text on top of the result.
     blurredCtx.with {
-      item.japaneseText.draw(with: textView.frame, options: .usesLineFragmentOrigin, context: nil)
+      contextSentenceItem.japaneseText.draw(with: textView.frame, options: .usesLineFragmentOrigin,
+                                            context: nil)
     }
 
     // Position the overlay and set its contents to the image we just rendered.
@@ -111,6 +114,7 @@ private class ContextSentenceModelCell: AttributedModelCell {
   }
 
   override func didSelect() {
+    contextSentenceItem.blurred = false
     UIView.animate(withDuration: kRevealDuration) {
       self.blurredOverlay.alpha = 0
     }

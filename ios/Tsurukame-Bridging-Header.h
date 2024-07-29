@@ -15,35 +15,9 @@
 #ifndef Tsurukame_Bridging_Header_h
 #define Tsurukame_Bridging_Header_h
 
-#import "LessonsViewController.h"
-#import "LocalCachingClient.h"
-#import "LoginViewController.h"
-#import "NSMutableAttributedString+Replacements.h"
-#import "NSString+LevenshteinDistance.h"
-#import "ReviewItem.h"
-#import "ReviewSummaryViewController.h"
-#import "SearchResultViewController.h"
-#import "Settings.h"
-#import "SettingsViewController.h"
-#import "SubjectCatalogueViewController.h"
-#import "SubjectDetailsViewController.h"
-#import "SubjectsRemainingViewController.h"
-#import "SuccessAnimation.h"
-#import "TKMFontLoader.h"
-#import "TKMGradientView.h"
+#import "Extensions/MMDrawerController+setAnimatingDrawer.h"
+#import "Extensions/NSString+LevenshteinDistance.h"
 #import "TKMKanaInput.h"
-#import "TKMReviewContainerViewController.h"
-#import "TKMSubjectModelItem.h"
-#import "Tables/TKMBasicModelItem.h"
-#import "Tables/TKMDownloadModelItem.h"
-#import "Tables/TKMMarkupModelItem.h"
-#import "Tables/TKMModelItem.h"
-#import "Tables/TKMSubjectModelItem.h"
-#import "Tables/TKMTableModel.h"
-#import "UIView+SafeAreaInsets.h"
-
-#import "proto/Wanikani+Convenience.h"
-#import "proto/Wanikani.pbobjc.h"
 
 #import <Haneke/Haneke.h>
 #import <WatchConnectivity/WatchConnectivity.h>

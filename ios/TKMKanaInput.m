@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #import "TKMKanaInput.h"
-#import "Settings.h"
 #import "TKMKanaInput+Internals.h"
+#import "Tsurukame-Swift.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
-void EnsureInitialised() {
+void EnsureInitialised(void) {
   dispatch_once(&sOnceToken, ^{
     kReplacements = @{
       @"a" : @"\u3042",
@@ -406,6 +406,8 @@ NSString *TKMConvertKanaText(NSString *input) {
       textField.text =
           [textField.text stringByReplacingCharactersInRange:NSMakeRange(range.location - 1, 1)
                                                   withString:replacementString];
+      [textField setTextAlignment:NSTextAlignmentCenter];
+
       return YES;
     }
 
@@ -417,6 +419,8 @@ NSString *TKMConvertKanaText(NSString *input) {
       textField.text =
           [textField.text stringByReplacingCharactersInRange:NSMakeRange(range.location - 1, 1)
                                                   withString:replacementString];
+      [textField setTextAlignment:NSTextAlignmentCenter];
+
       return YES;
     }
   }
@@ -442,6 +446,8 @@ NSString *TKMConvertKanaText(NSString *input) {
       }
       textField.text = [textField.text stringByReplacingCharactersInRange:replacementRange
                                                                withString:replacement];
+      [textField setTextAlignment:NSTextAlignmentCenter];
+
       return NO;
     }
   }

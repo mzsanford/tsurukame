@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,18 +19,7 @@ protocol AudioDelegate: NSObject {
   func audioPlaybackStateChanged(state: Audio.PlaybackState)
 }
 
-@objc(TKMAudio)
-@objcMembers
 class Audio: NSObject {
-  // Returns the local directory that contains cached audio files.
-  class func cacheDirectoryPath() -> String {
-    let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
-    return "\(paths[0])/audio"
-  }
-
-  private let kURLPattern = "https://cdn.wanikani.com/audios/%d-subject-%d.mp3"
-  private let kOfflineFilePattern = "%@/a%d.mp3"
-
   enum PlaybackState {
     case loading
     case playing
@@ -39,8 +28,11 @@ class Audio: NSObject {
 
   private let services: TKMServices
   private var player: AVPlayer?
+  private var lastPlayedAudioIndex: Int = 0
   private var waitingToPlay = false
   private weak var delegate: AudioDelegate?
+
+  private let nd = NotificationDispatcher()
 
   init(services: TKMServices) {
     self.services = services
@@ -53,10 +45,7 @@ class Audio: NSObject {
       .setCategory(.playback, options: [.duckOthers, .interruptSpokenAudioAndMixWithOthers])
 
     // Listen for when playback of any item finished.
-    let nc = NotificationCenter.default
-    nc
-      .addObserver(self, selector: #selector(itemFinishedPlaying),
-                   name: NSNotification.Name.AVPlayerItemDidPlayToEndTime, object: nil)
+    nd.add(name: .AVPlayerItemDidPlayToEndTime) { [weak self] _ in self?.itemFinishedPlaying() }
   }
 
   private(set) var currentState = PlaybackState.finished {
@@ -77,17 +66,36 @@ class Audio: NSObject {
     }
   }
 
-  func play(subjectID: Int, delegate: AudioDelegate?) {
-    guard let subject = services.dataLoader.load(subjectID: subjectID) else {
+  func play(subjectID: Int64, delegate: AudioDelegate?) {
+    guard let subject = services.localCachingClient.getSubject(id: subjectID) else {
       return
     }
-    let audioID = subject.randomAudioID()
+    if !subject.hasVocabulary || subject.vocabulary.audio.isEmpty {
+      return
+    }
+    let offline = services.offlineAudio!
+
+    lastPlayedAudioIndex += 1
+    if lastPlayedAudioIndex >= subject.vocabulary.audio.count {
+      lastPlayedAudioIndex = 0
+    }
+    let audio = subject.vocabulary.audio[lastPlayedAudioIndex]
 
     // Is the audio available offline?
-    let filename = String(format: kOfflineFilePattern, Audio.cacheDirectoryPath(), audioID)
-    if FileManager.default.fileExists(atPath: filename) {
-      play(url: URL(fileURLWithPath: filename), delegate: delegate)
+    if offline.isCached(subjectId: subject.id, voiceActorId: audio.voiceActorID) {
+      play(url: offline.cacheUrl(subjectId: subject.id, voiceActorId: audio.voiceActorID),
+           delegate: delegate)
       return
+    }
+
+    // Maybe one of the other voice actors' audio is available offline.
+    for (index, audio) in subject.vocabulary.audio.enumerated() {
+      if offline.isCached(subjectId: subject.id, voiceActorId: audio.voiceActorID) {
+        lastPlayedAudioIndex = index
+        play(url: offline.cacheUrl(subjectId: subject.id, voiceActorId: audio.voiceActorID),
+             delegate: delegate)
+        return
+      }
     }
 
     if !services.reachability.isReachable() {
@@ -95,8 +103,7 @@ class Audio: NSObject {
       return
     }
 
-    let urlString = String(format: kURLPattern, audioID, subjectID)
-    play(url: URL(string: urlString)!, delegate: delegate)
+    play(url: URL(string: audio.url)!, delegate: delegate)
   }
 
   private func play(url: URL, delegate: AudioDelegate?) {
@@ -123,7 +130,7 @@ class Audio: NSObject {
                              context _: UnsafeMutableRawPointer?) {
     if keyPath == "currentItem.status" {
       guard let player = player,
-        let currentItem = player.currentItem else {
+            let currentItem = player.currentItem else {
         return
       }
 
@@ -147,7 +154,7 @@ class Audio: NSObject {
 
   private func showErrorDialog(_ error: Error) {
     guard let currentItem = player?.currentItem,
-      let asset = currentItem.asset as? AVURLAsset else {
+          let asset = currentItem.asset as? AVURLAsset else {
       return
     }
 
@@ -165,10 +172,10 @@ class Audio: NSObject {
     ac.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
 
     let vc = UIApplication.shared.keyWindow!.rootViewController!
-    vc.present(vc, animated: true, completion: nil)
+    vc.present(ac, animated: true, completion: nil)
   }
 
-  @objc private func itemFinishedPlaying() {
+  private func itemFinishedPlaying() {
     currentState = .finished
   }
 }

@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,11 +13,12 @@
 // limitations under the License.
 
 import Foundation
+import WaniKaniAPI
 
 private func UIColorFromHex(_ hexColor: Int32) -> UIColor {
-  let red = (CGFloat)((hexColor & 0xFF0000) >> 16) / 255
-  let green = (CGFloat)((hexColor & 0x00FF00) >> 8) / 255
-  let blue = (CGFloat)(hexColor & 0x0000FF) / 255
+  let red = CGFloat((hexColor & 0xFF0000) >> 16) / 255
+  let green = CGFloat((hexColor & 0x00FF00) >> 8) / 255
+  let blue = CGFloat(hexColor & 0x0000FF) / 255
   return UIColor(red: red, green: green, blue: blue, alpha: 1.0)
 }
 
@@ -40,11 +41,10 @@ private func AdaptiveColorHex(light: Int32, dark: Int32) -> UIColor {
 }
 
 @objc
-@objcMembers
 class TKMStyle: NSObject {
   // MARK: - Shadows
 
-  class func addShadowToView(_ view: UIView, offset: Float, opacity: Float, radius: Float) {
+  @objc class func addShadowToView(_ view: UIView, offset: Float, opacity: Float, radius: Float) {
     view.layer.shadowColor = UIColor.black.cgColor
     view.layer.shadowOffset = CGSize(width: 0.0, height: Double(offset))
     view.layer.shadowOpacity = opacity
@@ -72,15 +72,19 @@ class TKMStyle: NSObject {
   static let meaningColor2 = AdaptiveColor(light: UIColor(white: 0.882, alpha: 1),
                                            dark: UIColor(white: 0.682, alpha: 1))
 
-  // The [Any] types force these to be exposed to objective-C as an untyped NSArray*.
-  static var radicalGradient: [Any] { [radicalColor1.cgColor, radicalColor2.cgColor] }
-  static var kanjiGradient: [Any] { [kanjiColor1.cgColor, kanjiColor2.cgColor] }
-  static var vocabularyGradient: [Any] { [vocabularyColor1.cgColor, vocabularyColor2.cgColor] }
-  static var lockedGradient: [Any] { [lockedColor1.cgColor, lockedColor2.cgColor] }
-  static var readingGradient: [Any] { [readingColor1.cgColor, readingColor2.cgColor] }
-  static var meaningGradient: [Any] { [meaningColor1.cgColor, meaningColor2.cgColor] }
+  static let explosionColor1 = UIColor(red: 247.0 / 255, green: 181.0 / 255, blue: 74.0 / 255,
+                                       alpha: 1.0)
+  static let explosionColor2 = UIColor(red: 230.0 / 255, green: 57.0 / 255, blue: 91.0 / 255,
+                                       alpha: 1.0)
 
-  class func color(forSRSStageCategory srsStageCategory: TKMSRSStageCategory) -> UIColor {
+  static var radicalGradient: [CGColor] { [radicalColor1.cgColor, radicalColor2.cgColor] }
+  static var kanjiGradient: [CGColor] { [kanjiColor1.cgColor, kanjiColor2.cgColor] }
+  static var vocabularyGradient: [CGColor] { [vocabularyColor1.cgColor, vocabularyColor2.cgColor] }
+  static var lockedGradient: [CGColor] { [lockedColor1.cgColor, lockedColor2.cgColor] }
+  static var readingGradient: [CGColor] { [readingColor1.cgColor, readingColor2.cgColor] }
+  static var meaningGradient: [CGColor] { [meaningColor1.cgColor, meaningColor2.cgColor] }
+
+  class func color(forSRSStageCategory srsStageCategory: SRSStageCategory) -> UIColor {
     switch srsStageCategory {
     case .apprentice:
       return UIColor(red: 0.87, green: 0.00, blue: 0.58, alpha: 1.0)
@@ -92,12 +96,10 @@ class TKMStyle: NSObject {
       return UIColor(red: 0.00, green: 0.58, blue: 0.87, alpha: 1.0)
     case .burned:
       return UIColor(red: 0.26, green: 0.26, blue: 0.26, alpha: 1.0)
-    default:
-      return TKMStyle.Color.label
     }
   }
 
-  class func color2(forSubjectType subjectType: TKMSubject_Type) -> UIColor {
+  class func color2(forSubjectType subjectType: TKMSubject.TypeEnum) -> UIColor {
     switch subjectType {
     case .radical:
       return radicalColor2
@@ -105,12 +107,12 @@ class TKMStyle: NSObject {
       return kanjiColor2
     case .vocabulary:
       return vocabularyColor2
-    @unknown default:
+    default:
       fatalError()
     }
   }
 
-  class func gradient(forAssignment assignment: TKMAssignment) -> [Any] {
+  class func gradient(forAssignment assignment: TKMAssignment) -> [CGColor] {
     switch assignment.subjectType {
     case .radical:
       return radicalGradient
@@ -118,12 +120,12 @@ class TKMStyle: NSObject {
       return kanjiGradient
     case .vocabulary:
       return vocabularyGradient
-    @unknown default:
+    default:
       fatalError()
     }
   }
 
-  class func gradient(forSubject subject: TKMSubject) -> [Any] {
+  class func gradient(forSubject subject: TKMSubject) -> [CGColor] {
     if subject.hasRadical {
       return radicalGradient
     } else if subject.hasKanji {
@@ -136,44 +138,15 @@ class TKMStyle: NSObject {
 
   // MARK: - Japanese fonts
 
-  static let japaneseFontName = "Hiragino Sans"
-
-  // Tries to load fonts from the list of font names, in order, until one is found.
-  private class func loadFont(_ names: [String], size: CGFloat) -> UIFont {
-    for name in names {
-      if let font = UIFont(name: name, size: size) {
-        return font
-      }
-    }
-    return UIFont.systemFont(ofSize: size)
-  }
-
-  class func japaneseFont(size: CGFloat) -> UIFont {
-    UIFont(name: japaneseFontName, size: size)!
-  }
-
-  class func japaneseFontLight(size: CGFloat) -> UIFont {
-    loadFont(["HiraginoSans-W3",
-              "HiraginoSans-W2",
-              "HiraginoSans-W1",
-              "HiraginoSans-W4",
-              "HiraginoSans-W5"], size: size)
-  }
-
-  class func japaneseFontBold(size: CGFloat) -> UIFont {
-    loadFont(["HiraginoSans-W8",
-              "HiraginoSans-W7",
-              "HiraginoSans-W6",
-              "HiraginoSans-W5"], size: size)
-  }
+  static let japaneseFontName = "HiraginoSans-W3"
+  static let japaneseFontNameBold = "HiraginoSans-W6"
 
   // MARK: - Dark mode aware UI colors
 
-  @objc(TKMStyleColor)
-  @objcMembers
-  class Color: NSObject {
+  enum Color {
     static let background = AdaptiveColor(light: UIColor.white, dark: UIColor.black)
     static let cellBackground = AdaptiveColorHex(light: 0xFFFFFF, dark: 0x1C1C1E)
+    static let separator = UIColor(red: 0.24, green: 0.24, blue: 0.26, alpha: 0.29)
     static let label = AdaptiveColor(light: UIColor.black, dark: UIColor.white)
     static let grey33 = AdaptiveColor(light: UIColor.darkGray, dark: UIColor.lightGray)
     static let grey66 = AdaptiveColor(light: UIColor.lightGray, dark: UIColor.darkGray)
@@ -187,6 +160,13 @@ class TKMStyle: NSObject {
     static let markupKanjiBackground = AdaptiveColorHex(light: 0xFFD6F1, dark: 0x1C1C1E)
     static let markupVocabularyForeground = AdaptiveColorHex(light: 0x000000, dark: 0xC34AFF)
     static let markupVocabularyBackground = AdaptiveColorHex(light: 0xF1D6FF, dark: 0x1C1C1E)
+
+    static var placeholderText: UIColor {
+      if #available(iOS 13.0, *) {
+        return UIColor.placeholderText
+      }
+      return UIColor(red: 0, green: 0, blue: 0.0980392, alpha: 0.22)
+    }
   }
 
   // Wrapper around UITraitCollection.performAsCurrent that just does nothing

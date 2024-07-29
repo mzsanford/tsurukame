@@ -1,4 +1,4 @@
-// Copyright 2020 David Sansome
+// Copyright 2024 David Sansome
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,9 @@
 
 import Foundation
 
-@objc(TKMReadingModelItem)
-@objcMembers
 class ReadingModelItem: AttributedModelItem {
   var audio: Audio?
-  var audioSubjectID: Int32 = 0
+  var audioSubjectID: Int64 = 0
 
   weak var audioDelegate: AudioDelegate?
 
@@ -26,13 +24,17 @@ class ReadingModelItem: AttributedModelItem {
     super.init(text: text)
   }
 
-  func setAudio(_ audio: Audio, subjectID: Int32) {
+  func setAudio(_ audio: Audio, subjectID: Int64) {
     self.audio = audio
     audioSubjectID = subjectID
+    rightButtonImage = Asset.baselineVolumeUpBlack24pt.image
+    rightButtonCallback = { [unowned self] (_: AttributedModelCell) in
+      self.playAudio()
+    }
   }
 
-  override func cellClass() -> AnyClass! {
-    ReadingModelCell.self
+  override var cellFactory: TableModelCellFactory {
+    .fromDefaultConstructor(cellClass: ReadingModelCell.self)
   }
 
   func playAudio() {
@@ -40,30 +42,21 @@ class ReadingModelItem: AttributedModelItem {
       if audio.currentState == .playing {
         audio.stopPlayback()
       } else {
-        audio.play(subjectID: Int(audioSubjectID), delegate: audioDelegate)
+        audio.play(subjectID: audioSubjectID, delegate: audioDelegate)
       }
     }
   }
 }
 
 class ReadingModelCell: AttributedModelCell, AudioDelegate {
-  override func update(with baseItem: TKMModelItem!) {
-    super.update(with: baseItem)
-    let item = baseItem as! ReadingModelItem
+  @TypedModelItem var readingItem: ReadingModelItem
 
-    if item.audioSubjectID != 0 {
-      if rightButton == nil {
-        rightButton = UIButton()
-        rightButton!
-          .addTarget(item, action: #selector(ReadingModelItem.playAudio), for: .touchUpInside)
-        addSubview(rightButton!)
-      }
-      rightButton!.setImage(UIImage(named: "baseline_volume_up_black_24pt"), for: .normal)
-      item.audioDelegate = self
+  override func update() {
+    super.update()
+    if readingItem.audioSubjectID != 0 {
+      readingItem.audioDelegate = self
     } else {
-      rightButton?.removeFromSuperview()
-      rightButton = nil
-      item.audioDelegate = nil
+      readingItem.audioDelegate = nil
     }
   }
 
@@ -73,10 +66,10 @@ class ReadingModelCell: AttributedModelCell, AudioDelegate {
       rightButton?.isEnabled = false
     case .playing:
       rightButton?.isEnabled = true
-      rightButton?.setImage(UIImage(named: "baseline_stop_black_24pt"), for: .normal)
+      rightButton?.setImage(Asset.baselineStopBlack24pt.image, for: .normal)
     case .finished:
       rightButton?.isEnabled = true
-      rightButton?.setImage(UIImage(named: "baseline_volume_up_black_24pt"), for: .normal)
+      rightButton?.setImage(Asset.baselineVolumeUpBlack24pt.image, for: .normal)
     }
   }
 }
